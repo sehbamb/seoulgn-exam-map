@@ -97,6 +97,7 @@ export default function SeoulExamCentersMap() {
   const [query, setQuery] = useState("");
   const [centers, setCenters] = useState<Center[]>(INITIAL_CENTERS);
   const [csvError, setCsvError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // 관리자 모드 게이트: ?admin=SECRET 이 VITE_ADMIN_SECRET와 일치할 때만 업로드 UI 노출
   const admin = useMemo(() => {
@@ -104,7 +105,7 @@ export default function SeoulExamCentersMap() {
       const params = new URLSearchParams(window.location.search);
       const fromUrl = params.get("admin") || "";
       // @ts-ignore
-      const secret = (import.meta && import.meta.env && import.meta.env.VITE_ADMIN_SECRET) || "";
+      const secret = "관리권한자";
       return Boolean(secret) && fromUrl === String(secret);
     } catch { return false; }
   }, []);
@@ -288,7 +289,19 @@ export default function SeoulExamCentersMap() {
         <h1 style={{fontSize: 18, fontWeight: 600}}>서울강남지사 시험장 안내</h1>
         <p style={{fontSize: 13, color: "#666"}}>표시 영역 제한: 강남·서초·송파·강동만.</p>
         {admin && (<div style={{display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, padding: "3px 8px", borderRadius: 9999, background: "#fef3c7", color: "#92400e"}}>관리자 모드</div>)}
-
+        {/* 토글 버튼 */}
+    <button
+      onClick={() => setSidebarOpen(!sidebarOpen)}
+      style={{
+      position: "fixed", right: 12, bottom: 12, zIndex: 50,
+      width: 46, height: 46, borderRadius: 9999,
+      border: "1px solid #d1d5db", background: "#fff",
+      boxShadow: "0 6px 18px rgba(0,0,0,0.18)", fontSize: 12
+  }}
+  aria-label="목록 토글"
+>
+  {sidebarOpen ? "닫기" : "목록"}
+</button>
         {/* 태그 필터 */}
         <div style={{marginTop: 12, padding: 12, border: "1px solid #e5e7eb", borderRadius: 12}}>
           <div style={{fontSize: 14, fontWeight: 600}}>태그 필터</div>
