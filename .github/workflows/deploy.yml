@@ -15,22 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Node 20 + npm 설치
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      # package-lock.json 없을 가능성 고려해서 npm ci 대신 npm install
       - run: npm install
 
-      # CSV -> JSON (prebuild에 달아놨으면 이 단계는 자동 실행됨)
-      # - run: node scripts/csv2json.js   # package.json에 "prebuild"가 있으면 생략 가능
-
-      # Vite 빌드
       - run: npm run build
 
-      # Pages 아티팩트 업로드
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
