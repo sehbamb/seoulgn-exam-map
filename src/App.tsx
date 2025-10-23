@@ -164,9 +164,10 @@ export default function SeoulExamCentersMap() {
     if (admin) return;
     (async () => {
       try {
-        const base = (import.meta as any)?.env?.BASE_URL || (window as any).BASE_URL || "/";
+        const basePath = ((import.meta as any)?.env?.BASE_URL || (window as any).BASE_URL || "/") as string;
+      const absBase = new URL(basePath, window.location.origin).toString();
         // 1차: centers.json 시도
-        const jsonUrl = new URL("centers.json", base).toString();
+        const jsonUrl = new URL("centers.json", absBase).toString();
         const res = await fetch(jsonUrl, { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
@@ -177,7 +178,7 @@ export default function SeoulExamCentersMap() {
           }
         }
         // 2차: data/centers.csv 런타임 파싱
-        const csvUrl = new URL("data/centers.csv", base).toString();
+        const csvUrl = new URL("data/centers.csv", absBase).toString();
         const csvRes = await fetch(csvUrl, { cache: "no-store" });
         if (csvRes.ok) {
           const text = await csvRes.text();
@@ -284,7 +285,7 @@ export default function SeoulExamCentersMap() {
   return (
     <div style={{height: "100vh", width: "100vw", display: "grid", gridTemplateColumns: "minmax(260px,400px) 1fr"}}>
       <aside style={{borderRight: "1px solid #e5e7eb", padding: 12, overflow: "auto"}}>
-        <h1 style={{fontSize: 18, fontWeight: 600}}>서울강남지사 시험장 안내</h1>
+        <h1 style={{fontSize: 18, fontWeight: 600}}>서울 시험장 안내</h1>
         <p style={{fontSize: 13, color: "#666"}}>표시 영역 제한: 강남·서초·송파·강동만.</p>
         {admin && (<div style={{display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, padding: "3px 8px", borderRadius: 9999, background: "#fef3c7", color: "#92400e"}}>관리자 모드</div>)}
 
