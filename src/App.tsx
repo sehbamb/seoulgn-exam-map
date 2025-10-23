@@ -160,34 +160,39 @@ export default function SeoulExamCentersMap() {
   };
 
   // 비관리자: 공개 JSON 자동 로드(있을 때만) + 실패 시 CSV 런타임 파싱 폴백
-useEffect(() => {
-  if (admin) return;
-  (async () => {
-    try {
-      // 1차: centers.json 시도
-      const base = (import.meta as any)?.env?.BASE_URL || (window as any).BASE_URL || "/";
-      const jsonUrl = new URL("centers.json", base).toString();
-      const res = await fetch(jsonUrl, { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) { validateCenters(data as Center[], undefined); setCenters(data as Center[]); return; }
-      }
-      // 2차 폴백: data/centers.csv 런타임 파싱
-      const csvUrl = new URL("data/centers.csv", base).toString();
-      const csvRes = await fetch(csvUrl, { cache: "no-store" });
-      if (csvRes.ok) {
-        const text = await csvRes.text();
-        const parsed = parseCSV(text);
-        validateCenters(parsed, undefined);
-        setCenters(parsed);
-        console.warn("[fallback] loaded data from data/centers.csv at runtime");
-      } else {
-        console.warn("centers.json and data/centers.csv not found. showing empty map.");
-      }
-    } catch (e) { console.error(e); }
-  })();
-}, [admin]);
-
+  useEffect(() => {
+    if (admin) return;
+    (async () => {
+      try {
+        const base = (import.meta as any)?.env?.BASE_URL || (window as any).BASE_URL || "/";
+        // 1차: centers.json 시도
+        const jsonUrl = new URL("centers.json", base).toString();
+        const res = await fetch(jsonUrl, { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            validateCenters(data as Center[], undefined);
+            setCenters(data as Center[]);
+            return;
+          }
+        }
+        // 2차: data/centers.csv 런타임 파싱
+        const csvUrl = new URL("data/centers.csv", base).toString();
+        const csvRes = await fetch(csvUrl, { cache: "no-store" });
+        if (csvRes.ok) {
+          const text = await csvRes.text();
+          const parsed = parseCSV(text);
+          if (parsed.length > 0) {
+            validateCenters(parsed, undefined);
+            setCenters(parsed);
+            console.warn("[fallback] loaded data from data/centers.csv at runtime");
+          }
+        } else {
+          console.warn("centers.json and data/centers.csv not found. showing empty map.");
+        }
+      } catch (e) { console.error(e); }
+    })();
+  }, [admin]);
 
   useEffect(() => {
     if (!mapRef.current || mapObj.current) return;
@@ -323,7 +328,7 @@ useEffect(() => {
         {/* 검색 */}
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="이름, 주소, 메모, 태그 검색"
                style={{width: "100%", border: "1px solid #d1d5db", borderRadius: 16, padding: "6px 10px", fontSize: 13, marginTop: 12}} />
-        <div style={{fontSize: 12, color: "#6b7280"}}>총 {filtered.length}개 표시</div>
+        <div style={{fontSize: 12, color: "#6b7280"}}>총 {filtered.length}개 표시{centers.length===0?" (데이터 없음)":""}</div>
 
         {/* 목록 */}
         <ul style={{marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflow: "auto", maxHeight: "calc(100vh - 340px)", paddingRight: 4}}>
@@ -350,5 +355,3 @@ useEffect(() => {
     </div>
   );
 }
-
-
