@@ -3,11 +3,16 @@ name: Deploy GH Pages
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -18,7 +23,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - run: npm install
 
@@ -30,6 +34,8 @@ jobs:
 
   deploy:
     needs: build
+    environment:
+      name: github-pages
     runs-on: ubuntu-latest
     steps:
       - id: deployment
