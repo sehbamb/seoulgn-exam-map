@@ -5,3 +5,4 @@ export default defineConfig({
   base: "/seoulgn-exam-map/",
   plugins: [react()]
 });
+
