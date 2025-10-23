@@ -1,5 +1,5 @@
 {
-  "name": "seoul-exam-map",
+  "name": "seoulgn-exam-map",
   "version": "1.0.0",
   "scripts": {
     "prebuild": "node scripts/csv2json.js",
@@ -19,3 +19,4 @@
     "vite": "^5.1.0"
   }
 }
+
