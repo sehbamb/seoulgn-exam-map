@@ -159,19 +159,35 @@ export default function SeoulExamCentersMap() {
     catch (e: any) { setCsvError(e?.message || String(e)); }
   };
 
-  // 비관리자: 공개 JSON 자동 로드(있을 때만)
-  useEffect(() => {
-    if (admin) return;
-    (async () => {
-      try {
-        const res = await fetch(new URL("centers.json", (import.meta as any)?.env?.BASE_URL || (window as any).BASE_URL || "/").toString(), { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) { validateCenters(data as Center[], undefined); setCenters(data as Center[]); }
-        }
-      } catch { /* 공개 데이터 없으면 무시 */ }
-    })();
-  }, [admin]);
+  // 비관리자: 공개 JSON 자동 로드(있을 때만) + 실패 시 CSV 런타임 파싱 폴백
+useEffect(() => {
+  if (admin) return;
+  (async () => {
+    try {
+      // 1차: centers.json 시도
+      const base = (import.meta as any)?.env?.BASE_URL || (window as any).BASE_URL || "/";
+      const jsonUrl = new URL("centers.json", base).toString();
+      const res = await fetch(jsonUrl, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) { validateCenters(data as Center[], undefined); setCenters(data as Center[]); return; }
+      }
+      // 2차 폴백: data/centers.csv 런타임 파싱
+      const csvUrl = new URL("data/centers.csv", base).toString();
+      const csvRes = await fetch(csvUrl, { cache: "no-store" });
+      if (csvRes.ok) {
+        const text = await csvRes.text();
+        const parsed = parseCSV(text);
+        validateCenters(parsed, undefined);
+        setCenters(parsed);
+        console.warn("[fallback] loaded data from data/centers.csv at runtime");
+      } else {
+        console.warn("centers.json and data/centers.csv not found. showing empty map.");
+      }
+    } catch (e) { console.error(e); }
+  })();
+}, [admin]);
+
 
   useEffect(() => {
     if (!mapRef.current || mapObj.current) return;
@@ -334,4 +350,5 @@ export default function SeoulExamCentersMap() {
     </div>
   );
 }
+
 
