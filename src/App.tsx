@@ -104,7 +104,7 @@ export default function SeoulExamCentersMap() {
       const params = new URLSearchParams(window.location.search);
       const fromUrl = params.get("admin") || "";
       // @ts-ignore
-      const secret = "2161";
+      const secret = (import.meta && import.meta.env && import.meta.env.VITE_ADMIN_SECRET) || "";
       return Boolean(secret) && fromUrl === String(secret);
     } catch { return false; }
   }, []);
@@ -261,66 +261,76 @@ export default function SeoulExamCentersMap() {
 
   // UI
   return (
-    <div className="w-full h-screen grid grid-cols-1 lg:grid-cols-[400px_1fr]">
-      <aside className="border-r border-gray-200 p-4 space-y-3">
-        <h1 className="text-xl font-semibold">서울 시험장 안내</h1>
-        <p className="text-sm text-gray-600">표시 영역 제한: 강남·서초·송파·강동만.</p>
-        {admin && (<div className="inline-flex items-center gap-2 text-[11px] px-2 py-[3px] rounded-full bg-amber-100 text-amber-800">관리자 모드</div>)}
+    <div style={{height: "100vh", width: "100vw", display: "grid", gridTemplateColumns: "minmax(260px,400px) 1fr"}}>
+      <aside style={{borderRight: "1px solid #e5e7eb", padding: 12, overflow: "auto"}}>
+        <h1 style={{fontSize: 18, fontWeight: 600}}>서울 시험장 안내</h1>
+        <p style={{fontSize: 13, color: "#666"}}>표시 영역 제한: 강남·서초·송파·강동만.</p>
+        {admin && (<div style={{display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, padding: "3px 8px", borderRadius: 9999, background: "#fef3c7", color: "#92400e"}}>관리자 모드</div>)}
 
         {/* 태그 필터 */}
-        <div className="space-y-2 p-3 border rounded-xl">
-          <div className="text-sm font-medium">태그 필터</div>
-          {allTags.length === 0 ? (<div className="text-xs text-gray-500">사용 가능한 태그가 없습니다.</div>) : (
-            <div className="flex flex-wrap gap-2">
+        <div style={{marginTop: 12, padding: 12, border: "1px solid #e5e7eb", borderRadius: 12}}>
+          <div style={{fontSize: 14, fontWeight: 600}}>태그 필터</div>
+          {allTags.length === 0 ? (
+            <div style={{fontSize: 12, color: "#6b7280"}}>사용 가능한 태그가 없습니다.</div>
+          ) : (
+            <div style={{display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6}}>
               {allTags.map((t) => (
-                <button key={t} onClick={() => toggleTag(t)} className={`text-xs px-2 py-[3px] rounded-full border ${activeTags.includes(t) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-700"}`} title={t}>{t}</button>
+                <button key={t} onClick={() => toggleTag(t)}
+                  style={{fontSize: 12, padding: "4px 8px", borderRadius: 9999, border: "1px solid #d1d5db", background: activeTags.includes(t) ? "#2563eb" : "#fff", color: activeTags.includes(t) ? "#fff" : "#374151"}}>
+                  {t}
+                </button>
               ))}
-              {activeTags.length > 0 && (<button onClick={clearTags} className="text-xs underline">초기화</button>)}
+              {activeTags.length > 0 && (
+                <button onClick={clearTags} style={{fontSize: 12, textDecoration: "underline"}}>초기화</button>
+              )}
             </div>
           )}
-          <div className="text-[11px] text-gray-500">필기: 파란색, 실기(작업): 빨간색, 기타: 초록색</div>
+          <div style={{fontSize: 11, color: "#6b7280", marginTop: 6}}>필기: 파란색, 실기(작업): 빨간색, 기타: 초록색</div>
         </div>
 
         {/* CSV 업로드 (관리자 전용) */}
         {admin && (
-          <div className="space-y-2 p-3 border rounded-xl bg-gray-50">
-            <div className="text-sm font-medium">CSV 업로드</div>
+          <div style={{marginTop: 12, padding: 12, border: "1px solid #e5e7eb", borderRadius: 12, background: "#f9fafb"}}>
+            <div style={{fontSize: 14, fontWeight: 600}}>CSV 업로드</div>
             <input type="file" accept=".csv,text/csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadCSV(f); }} />
-            <div className="text-xs text-gray-500">필수 헤더: id,name,lat,lng | 선택: address,phone,hours,note,tags</div>
-            {csvError && <div className="text-xs text-red-600">{csvError}</div>}
+            <div style={{fontSize: 12, color: "#6b7280"}}>필수 헤더: id,name,lat,lng | 선택: address,phone,hours,note,tags</div>
+            {csvError && <div style={{fontSize: 12, color: "#dc2626"}}>{csvError}</div>}
             <details>
-              <summary className="text-xs underline cursor-pointer">CSV 텍스트로 붙여넣기</summary>
-              <div className="space-y-2 mt-2">
-                <textarea onChange={(e) => onPasteCSV(e.target.value)} placeholder="id,name,address,lat,lng,phone,hours,note,tags ..." className="w-full h-28 border rounded p-2 text-sm" />
+              <summary style={{fontSize: 12, textDecoration: "underline", cursor: "pointer"}}>CSV 텍스트로 붙여넣기</summary>
+              <div style={{marginTop: 8}}>
+                <textarea onChange={(e) => onPasteCSV(e.target.value)} placeholder="id,name,address,lat,lng,phone,hours,note,tags ..." style={{width: "100%", height: 120, border: "1px solid #d1d5db", borderRadius: 8, padding: 8, fontSize: 13}} />
               </div>
             </details>
           </div>
         )}
 
         {/* 검색 */}
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="이름, 주소, 메모, 태그 검색" className="w-full rounded-2xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <div className="text-xs text-gray-500">총 {filtered.length}개 표시</div>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="이름, 주소, 메모, 태그 검색"
+               style={{width: "100%", border: "1px solid #d1d5db", borderRadius: 16, padding: "6px 10px", fontSize: 13, marginTop: 12}} />
+        <div style={{fontSize: 12, color: "#6b7280"}}>총 {filtered.length}개 표시</div>
 
         {/* 목록 */}
-        <ul className="space-y-2 overflow-auto max-h-[calc(100vh-340px)] pr-1">
+        <ul style={{marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflow: "auto", maxHeight: "calc(100vh - 340px)", paddingRight: 4}}>
           {filtered.map((c) => (
-            <li key={c.id} className="group border rounded-xl p-3 hover:shadow-sm transition">
-              <div className="flex items-center justify-between">
-                <div className="font-medium text-sm">{c.name}</div>
-                <button onClick={() => flyToCenter(c.lng, c.lat)} className="text-xs underline opacity-70 group-hover:opacity-100">지도이동</button>
+            <li key={c.id} style={{border: "1px solid #e5e7eb", borderRadius: 12, padding: 12}}>
+              <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+                <div style={{fontWeight: 600, fontSize: 14}}>{c.name}</div>
+                <button onClick={() => flyToCenter(c.lng, c.lat)} style={{fontSize: 12, textDecoration: "underline", opacity: 0.8}}>지도이동</button>
               </div>
-              <div className="text-xs text-gray-600 mt-1">{c.address}</div>
-              <div className="text-[11px] text-gray-500 mt-1">{c.note}</div>
-              <div className="mt-1 flex flex-wrap gap-1">{(c.tags || []).map((tag) => (<span key={tag} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-[2px] rounded-full">{tag}</span>))}</div>
+              <div style={{fontSize: 12, color: "#4b5563", marginTop: 4}}>{c.address}</div>
+              <div style={{fontSize: 11, color: "#6b7280", marginTop: 4}}>{c.note}</div>
+              <div style={{marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4}}>{(c.tags || []).map((tag) => (
+                <span key={tag} style={{fontSize: 10, background: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: 9999}}>{tag}</span>
+              ))}</div>
             </li>
           ))}
-          {filtered.length === 0 && (<li className="text-xs text-gray-500">표시할 데이터가 없습니다.</li>)}
+          {filtered.length === 0 && (<li style={{fontSize: 12, color: "#6b7280"}}>표시할 데이터가 없습니다.</li>)}
         </ul>
 
-        <div className="pt-2 text:[11px] text-gray-500">지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.</div>
+        <div style={{paddingTop: 8, fontSize: 11, color: "#6b7280"}}>지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.</div>
       </aside>
 
-      <div ref={mapRef} className="w-full h-full" />
+      <div ref={mapRef} style={{height: "100%", width: "100%"}} />
     </div>
   );
 }
