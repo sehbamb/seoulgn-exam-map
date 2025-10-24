@@ -157,15 +157,32 @@ export default function SeoulExamCentersMap() {
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const toggleTag = (t: string) => setActiveTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   const clearTags = () => setActiveTags([]);
+  const [tagModeAll, setTagModeAll] = useState(false); // false: OR, true: AND
+
 
   // 검색 + 태그 필터
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    let arr = centers;
-    if (q) arr = arr.filter((c) => [c.name, c.address, c.note, ...(c.tags || [])].join(" ").toLowerCase().includes(q));
-    if (activeTags.length > 0) arr = arr.filter((c) => (c.tags || []).some((t) => activeTags.includes(t)));
-    return arr;
-  }, [centers, query, activeTags]);
+  const q = query.trim().toLowerCase();
+  let arr = centers;
+  if (q) {
+    arr = arr.filter((c) =>
+      [c.name, c.address, c.note, ...(c.tags || [])]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    );
+  }
+  if (activeTags.length > 0) {
+    arr = arr.filter((c) => {
+      const ts = c.tags || [];
+      return tagModeAll
+        ? activeTags.every(t => ts.includes(t))
+        : ts.some(t => activeTags.includes(t));
+    });
+  }
+  return arr;
+}, [centers, query, activeTags, tagModeAll]);
+
 
   // GeoJSON: examType 파생. 실기(작업) 빨강, 필기 파랑, 나머지 초록
   const geojson = useMemo(() => ({
@@ -338,6 +355,12 @@ export default function SeoulExamCentersMap() {
                   {t}
                 </button>
               ))}
+              <div style={{display:"flex", alignItems:"center", gap:8, marginTop:8}}>
+  <label style={{fontSize:12, color:"#374151"}}>
+    <input type="checkbox" checked={tagModeAll} onChange={e=>setTagModeAll(e.target.checked)} />
+    <span style={{marginLeft:6}}>태그 일치 방식: {tagModeAll ? "AND(모두 포함)" : "OR(하나 이상)"}</span>
+  </label>
+</div>
               {activeTags.length > 0 && (
                 <button onClick={clearTags} style={{fontSize: 12, textDecoration: "underline"}}>초기화</button>
               )}
