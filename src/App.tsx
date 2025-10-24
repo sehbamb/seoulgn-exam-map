@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { Map as MlMap, LngLatBoundsLike } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { Collapsible } from "./components/Collapsible";
-
 
 // =========================
 // 데이터 스키마 정의
@@ -51,64 +49,28 @@ function runSmokeTests(map: MlMap) {
   });
 }
 
-// CSV 파서: 따옴표, 이스케이프, 줄바꿈까지 처리
+// CSV 파서: 헤더 기반. tags는 ; 또는 , 구분 허용
 function parseCSV(text: string): Center[] {
-  const rows: string[] = [];
-  let cur = "", inQ = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i], next = text[i + 1];
-    if (ch === '"' && next === '"') { cur += '"'; i++; continue; }         // "" -> "
-    if (ch === '"') { inQ = !inQ; continue; }                               // 토글
-    if (ch === '\n' && !inQ) { rows.push(cur); cur = ""; continue; }        // 레코드 단위
-    cur += ch;
-  }
-  if (cur.trim().length) rows.push(cur);
-
-  const header = rows[0].split(",").map(h => h.trim().toLowerCase());
-  const getIdx = (k: string) => header.findIndex(h => h === k);
-  const idI = getIdx("id"), nameI = getIdx("name"), addrI = getIdx("address"),
-        latI = getIdx("lat"), lngI = getIdx("lng"), phoneI = getIdx("phone"),
-        hoursI = getIdx("hours"), noteI = getIdx("note"), tagsI = getIdx("tags");
+  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return [];
+  const header = lines[0].split(",").map((h) => h.trim());
+  const idx = (k: string) => header.findIndex((h) => h.toLowerCase() === k);
+  const idI = idx("id"), nameI = idx("name"), addrI = idx("address"), latI = idx("lat"), lngI = idx("lng"), phoneI = idx("phone"), hoursI = idx("hours"), noteI = idx("note"), tagsI = idx("tags");
   assert(idI >= 0 && nameI >= 0 && latI >= 0 && lngI >= 0, "CSV header must include id,name,lat,lng");
-
-  function splitRow(r: string) {
-    const out: string[] = [];
-    let cell = "", q = false;
-    for (let i = 0; i < r.length; i++) {
-      const ch = r[i], next = r[i + 1];
-      if (ch === '"' && next === '"') { cell += '"'; i++; continue; }
-      if (ch === '"') { q = !q; continue; }
-      if (ch === ',' && !q) { out.push(cell.trim()); cell = ""; continue; }
-      cell += ch;
-    }
-    out.push(cell.trim());
-    return out;
-  }
-
+  const rows = lines.slice(1);
   const out: Center[] = [];
-  for (const r of rows.slice(1)) {
-    if (!r.trim()) continue;
-    const cells = splitRow(r);
-    const val = (i: number) => (i >= 0 ? (cells[i] ?? "").trim() : "");
-    const lat = Number(val(latI)), lng = Number(val(lngI));
-    const tags = (val(tagsI) || "")
-      .split(/[;|,]/)                     // ; 또는 , 구분
-      .map(t => t.trim())
-      .filter(Boolean);
-    out.push({
-      id: val(idI),
-      name: val(nameI),
-      address: val(addrI),
-      lat, lng,
-      phone: val(phoneI),
-      hours: val(hoursI),
-      note: val(noteI),
-      tags
-    });
+  for (const row of rows) {
+    const cells = row.split(",");
+    if (cells.length === 1 && cells[0].trim() === "") continue;
+    const get = (i: number) => (i >= 0 ? cells[i]?.trim() ?? "" : "");
+    const lat = Number(get(latI));
+    const lng = Number(get(lngI));
+    const tagsRaw = get(tagsI);
+    const tags = tagsRaw ? tagsRaw.split(/[;|,]/).map((t) => t.trim()).filter(Boolean) : [];
+    out.push({ id: get(idI), name: get(nameI), address: get(addrI), lat, lng, phone: get(phoneI), hours: get(hoursI), note: get(noteI), tags });
   }
   return out;
 }
-
 
 // 지도 보조 유틸
 function hasTag(c: Center, t: string) { return (c.tags || []).some((x) => x.trim() === t); }
@@ -131,15 +93,6 @@ function buildOutsideMask(bounds: [[number, number], [number, number]]) {
 export default function SeoulExamCentersMap() {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapObj = useRef<MlMap | null>(null);
-  // 사이드바 열림 상태
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-// 사이드바 열고 닫을 때 지도 리사이즈(그리드 전환 0.2s 후)
-useEffect(() => {
-  const t = setTimeout(() => mapObj.current?.resize?.(), 220);
-  return () => clearTimeout(t);
-}, [sidebarOpen]);
-
 
   const [query, setQuery] = useState("");
   const [centers, setCenters] = useState<Center[]>(INITIAL_CENTERS);
@@ -168,32 +121,15 @@ useEffect(() => {
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const toggleTag = (t: string) => setActiveTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   const clearTags = () => setActiveTags([]);
-  const [tagModeAll, setTagModeAll] = useState(false); // false: OR, true: AND
-
 
   // 검색 + 태그 필터
   const filtered = useMemo(() => {
-  const q = query.trim().toLowerCase();
-  let arr = centers;
-  if (q) {
-    arr = arr.filter((c) =>
-      [c.name, c.address, c.note, ...(c.tags || [])]
-        .join(" ")
-        .toLowerCase()
-        .includes(q)
-    );
-  }
-  if (activeTags.length > 0) {
-    arr = arr.filter((c) => {
-      const ts = c.tags || [];
-      return tagModeAll
-        ? activeTags.every(t => ts.includes(t))
-        : ts.some(t => activeTags.includes(t));
-    });
-  }
-  return arr;
-}, [centers, query, activeTags, tagModeAll]);
-
+    const q = query.trim().toLowerCase();
+    let arr = centers;
+    if (q) arr = arr.filter((c) => [c.name, c.address, c.note, ...(c.tags || [])].join(" ").toLowerCase().includes(q));
+    if (activeTags.length > 0) arr = arr.filter((c) => (c.tags || []).some((t) => activeTags.includes(t)));
+    return arr;
+  }, [centers, query, activeTags]);
 
   // GeoJSON: examType 파생. 실기(작업) 빨강, 필기 파랑, 나머지 초록
   const geojson = useMemo(() => ({
@@ -290,7 +226,7 @@ useEffect(() => {
       map.addLayer({ id: "clusters", type: "circle", source: "centers", filter: ["has", "point_count"], paint: {
         "circle-radius": ["step", ["get", "point_count"], 16, 10, 20, 30, 26, 100, 32],
         "circle-color": ["step", ["get", "point_count"], "#88b9f3", 10, "#5e97ef", 30, "#2d6de9"], "circle-opacity": 0.9 } });
-      map.addLayer({ id: "cluster-count", type: "symbol", source: "centers", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count"], "text-font": ["Noto Sans Bold"], "text-size": 12 }, paint: { "text-color": "#fff" } });
+      map.addLayer({ id: "cluster-count", type: "symbol", source: "centers", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count"], "text-font": ["Noto Sans Regular"], "text-size": 12 }, paint: { "text-color": "#fff" } });
 
       // 단일 포인트: 태그 색상
       map.addLayer({ id: "unclustered", type: "circle", source: "centers", filter: ["!has", "point_count"], paint: {
@@ -299,7 +235,7 @@ useEffect(() => {
         "circle-stroke-color": "#ffffff", "circle-stroke-width": 2 } });
 
       // 라벨
-      map.addLayer({ id: "labels", type: "symbol", source: "centers", filter: ["!has", "point_count"], layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 13, "text-offset": [0, 1.2], "text-anchor": "top" }, paint: { "text-halo-color": "#ffffff", "text-halo-width": 1 } });
+      map.addLayer({ id: "labels", type: "symbol", source: "centers", filter: ["!has", "point_count"], layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 13, "text-offset": [0, 1.2], "text-anchor": "top" }, paint: { "text-halo-color": "#ffffff", "text-halo-width": 1 } });
 
       // 상호작용
       map.on("click", "clusters", (e) => {
@@ -346,46 +282,8 @@ useEffect(() => {
   };
 
   // UI
-  
   return (
-    <style>{`
-  /* 사이드바 토글 공용 스타일 */
-  .side-toggle {
-    position: absolute;
-    top: 10px;
-    left: 340px;
-    z-index: 5;
-    border: 0;
-    border-radius: 9999px;
-    padding: 8px 10px;
-    background: #111; color: #fff;
-    font-size: 14px; line-height: 1;
-    box-shadow: 0 6px 18px rgba(0,0,0,.2);
-    cursor: pointer;
-    transition: left .2s ease;
-  }
-  /* 체크박스는 숨김 */
-  #sb-toggle { position: absolute; opacity: 0; pointer-events: none; }
-
-  /* 레이아웃 컨테이너에 id를 붙여줄 거라서 그걸로 제어 */
-  #layout { position: relative; }
-  /* 체크되면: 사이드바는 화면 밖으로, 그리드는 0px + 1fr 로 확장 */
-  #layout:has(#sb-toggle:checked) .sidebar {
-    width: 0 !important;
-    padding: 0 !important;
-    border-right-color: transparent !important;
-  }
-  #layout:has(#sb-toggle:checked) .side-toggle { left: 8px; }
-  #layout:has(#sb-toggle:checked) .grid {
-    grid-template-columns: 0px 1fr !important;
-  }
-`}</style>
-    
-  <div id="layout">
-  <input id="sb-toggle" type="checkbox" defaultChecked={false} />
-    <div 
-    className="grid"
-    style={{height: "100vh", width: "100vw", display: "grid", gridTemplateColumns: "minmax(260px,400px) 1fr"}}>
+    <div style={{height: "100vh", width: "100vw", display: "grid", gridTemplateColumns: "minmax(260px,400px) 1fr"}}>
       <aside style={{borderRight: "1px solid #e5e7eb", padding: 12, overflow: "auto"}}>
         <h1 style={{fontSize: 18, fontWeight: 600}}>서울강남지사 시험장 안내</h1>
         <p style={{fontSize: 13, color: "#666"}}>표시 영역 제한: 강남·서초·송파·강동만.</p>
@@ -404,12 +302,6 @@ useEffect(() => {
                   {t}
                 </button>
               ))}
-              <div style={{display:"flex", alignItems:"center", gap:8, marginTop:8}}>
-  <label style={{fontSize:12, color:"#374151"}}>
-    <input type="checkbox" checked={tagModeAll} onChange={e=>setTagModeAll(e.target.checked)} />
-    <span style={{marginLeft:6}}>태그 일치 방식: {tagModeAll ? "AND(모두 포함)" : "OR(하나 이상)"}</span>
-  </label>
-</div>
               {activeTags.length > 0 && (
                 <button onClick={clearTags} style={{fontSize: 12, textDecoration: "underline"}}>초기화</button>
               )}
@@ -439,97 +331,28 @@ useEffect(() => {
                style={{width: "100%", border: "1px solid #d1d5db", borderRadius: 16, padding: "6px 10px", fontSize: 13, marginTop: 12}} />
         <div style={{fontSize: 12, color: "#6b7280"}}>총 {filtered.length}개 표시{centers.length===0?" (데이터 없음)":""}</div>
 
-        <Collapsible
-  title={
-    <>
-      목록{" "}
-      <span style={{ opacity: 0.6, fontSize: 12 }}>({filtered.length})</span>
-    </>
-  }
-  defaultOpen={true}
->
-  {/* 목록 */}
-  <ul
-    style={{
-      marginTop: 8,
-      display: "flex",
-      flexDirection: "column",
-      gap: 8,
-      overflow: "auto",
-      maxHeight: "calc(100vh - 340px)",
-      paddingRight: 4,
-    }}
-  >
-    {filtered.map((c) => (
-      <li
-        key={c.id}
-        style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          padding: 12,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</div>
-          <button
-            onClick={() => flyToCenter(c.lng, c.lat)}
-            style={{
-              fontSize: 12,
-              textDecoration: "underline",
-              opacity: 0.8,
-            }}
-          >
-            지도이동
-          </button>
-        </div>
-        <div style={{ fontSize: 12, color: "#4b5563", marginTop: 4 }}>
-          {c.address}
-        </div>
-        <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
-          {c.note}
-        </div>
-        <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {(c.tags || []).map((tag) => (
-            <span
-              key={tag}
-              style={{
-                fontSize: 10,
-                background: "#eff6ff",
-                color: "#1d4ed8",
-                padding: "2px 8px",
-                borderRadius: 9999,
-              }}
-            >
-              {tag}
-            </span>
+        {/* 목록 */}
+        <ul style={{marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflow: "auto", maxHeight: "calc(100vh - 340px)", paddingRight: 4}}>
+          {filtered.map((c) => (
+            <li key={c.id} style={{border: "1px solid #e5e7eb", borderRadius: 12, padding: 12}}>
+              <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+                <div style={{fontWeight: 600, fontSize: 14}}>{c.name}</div>
+                <button onClick={() => flyToCenter(c.lng, c.lat)} style={{fontSize: 12, textDecoration: "underline", opacity: 0.8}}>지도이동</button>
+              </div>
+              <div style={{fontSize: 12, color: "#4b5563", marginTop: 4}}>{c.address}</div>
+              <div style={{fontSize: 11, color: "#6b7280", marginTop: 4}}>{c.note}</div>
+              <div style={{marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4}}>{(c.tags || []).map((tag) => (
+                <span key={tag} style={{fontSize: 10, background: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: 9999}}>{tag}</span>
+              ))}</div>
+            </li>
           ))}
-        </div>
-      </li>
-    ))}
-    {filtered.length === 0 && (
-      <li style={{ fontSize: 12, color: "#6b7280" }}>표시할 데이터가 없습니다.</li>
-    )}
-  </ul>
+          {filtered.length === 0 && (<li style={{fontSize: 12, color: "#6b7280"}}>표시할 데이터가 없습니다.</li>)}
+        </ul>
 
-  <div style={{ paddingTop: 8, fontSize: 11, color: "#6b7280" }}>
-    지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.
-  </div>
-</Collapsible>
-
+        <div style={{paddingTop: 8, fontSize: 11, color: "#6b7280"}}>지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.</div>
       </aside>
-    <label htmlFor="sb-toggle" className="side-toggle" title="사이드바 열기/닫기" aria-label="사이드바 열기/닫기">
-  ◀▶
-</label>
 
       <div ref={mapRef} style={{height: "100%", width: "100%"}} />
     </div>
-</div> {/* #layout 닫기 */}
-
   );
 }
