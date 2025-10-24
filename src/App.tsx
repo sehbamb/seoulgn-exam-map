@@ -381,7 +381,7 @@ useEffect(() => {
         </ul>
 
         <div style={{paddingTop: 8, fontSize: 11, color: "#6b7280"}}>지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.
-        
+        <br />
         한국산업인력공단 서울강남지사 자격시험부 작성 2025-10-24</div>
       </aside>
       
