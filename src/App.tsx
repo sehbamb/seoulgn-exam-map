@@ -49,28 +49,64 @@ function runSmokeTests(map: MlMap) {
   });
 }
 
-// CSV 파서: 헤더 기반. tags는 ; 또는 , 구분 허용
+// CSV 파서: 따옴표, 이스케이프, 줄바꿈까지 처리
 function parseCSV(text: string): Center[] {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length === 0) return [];
-  const header = lines[0].split(",").map((h) => h.trim());
-  const idx = (k: string) => header.findIndex((h) => h.toLowerCase() === k);
-  const idI = idx("id"), nameI = idx("name"), addrI = idx("address"), latI = idx("lat"), lngI = idx("lng"), phoneI = idx("phone"), hoursI = idx("hours"), noteI = idx("note"), tagsI = idx("tags");
+  const rows: string[] = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i], next = text[i + 1];
+    if (ch === '"' && next === '"') { cur += '"'; i++; continue; }         // "" -> "
+    if (ch === '"') { inQ = !inQ; continue; }                               // 토글
+    if (ch === '\n' && !inQ) { rows.push(cur); cur = ""; continue; }        // 레코드 단위
+    cur += ch;
+  }
+  if (cur.trim().length) rows.push(cur);
+
+  const header = rows[0].split(",").map(h => h.trim().toLowerCase());
+  const getIdx = (k: string) => header.findIndex(h => h === k);
+  const idI = getIdx("id"), nameI = getIdx("name"), addrI = getIdx("address"),
+        latI = getIdx("lat"), lngI = getIdx("lng"), phoneI = getIdx("phone"),
+        hoursI = getIdx("hours"), noteI = getIdx("note"), tagsI = getIdx("tags");
   assert(idI >= 0 && nameI >= 0 && latI >= 0 && lngI >= 0, "CSV header must include id,name,lat,lng");
-  const rows = lines.slice(1);
+
+  function splitRow(r: string) {
+    const out: string[] = [];
+    let cell = "", q = false;
+    for (let i = 0; i < r.length; i++) {
+      const ch = r[i], next = r[i + 1];
+      if (ch === '"' && next === '"') { cell += '"'; i++; continue; }
+      if (ch === '"') { q = !q; continue; }
+      if (ch === ',' && !q) { out.push(cell.trim()); cell = ""; continue; }
+      cell += ch;
+    }
+    out.push(cell.trim());
+    return out;
+  }
+
   const out: Center[] = [];
-  for (const row of rows) {
-    const cells = row.split(",");
-    if (cells.length === 1 && cells[0].trim() === "") continue;
-    const get = (i: number) => (i >= 0 ? cells[i]?.trim() ?? "" : "");
-    const lat = Number(get(latI));
-    const lng = Number(get(lngI));
-    const tagsRaw = get(tagsI);
-    const tags = tagsRaw ? tagsRaw.split(/[;|,]/).map((t) => t.trim()).filter(Boolean) : [];
-    out.push({ id: get(idI), name: get(nameI), address: get(addrI), lat, lng, phone: get(phoneI), hours: get(hoursI), note: get(noteI), tags });
+  for (const r of rows.slice(1)) {
+    if (!r.trim()) continue;
+    const cells = splitRow(r);
+    const val = (i: number) => (i >= 0 ? (cells[i] ?? "").trim() : "");
+    const lat = Number(val(latI)), lng = Number(val(lngI));
+    const tags = (val(tagsI) || "")
+      .split(/[;|,]/)                     // ; 또는 , 구분
+      .map(t => t.trim())
+      .filter(Boolean);
+    out.push({
+      id: val(idI),
+      name: val(nameI),
+      address: val(addrI),
+      lat, lng,
+      phone: val(phoneI),
+      hours: val(hoursI),
+      note: val(noteI),
+      tags
+    });
   }
   return out;
 }
+
 
 // 지도 보조 유틸
 function hasTag(c: Center, t: string) { return (c.tags || []).some((x) => x.trim() === t); }
