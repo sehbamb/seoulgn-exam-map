@@ -279,7 +279,7 @@ export default function SeoulExamCentersMap() {
       map.addLayer({ id: "clusters", type: "circle", source: "centers", filter: ["has", "point_count"], paint: {
         "circle-radius": ["step", ["get", "point_count"], 16, 10, 20, 30, 26, 100, 32],
         "circle-color": ["step", ["get", "point_count"], "#88b9f3", 10, "#5e97ef", 30, "#2d6de9"], "circle-opacity": 0.9 } });
-      map.addLayer({ id: "cluster-count", type: "symbol", source: "centers", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count"], "text-font": ["Noto Sans Regular"], "text-size": 12 }, paint: { "text-color": "#fff" } });
+      map.addLayer({ id: "cluster-count", type: "symbol", source: "centers", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count"], "text-font": ["Noto Sans Bold"], "text-size": 12 }, paint: { "text-color": "#fff" } });
 
       // 단일 포인트: 태그 색상
       map.addLayer({ id: "unclustered", type: "circle", source: "centers", filter: ["!has", "point_count"], paint: {
