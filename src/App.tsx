@@ -97,6 +97,16 @@ export default function SeoulExamCentersMap() {
   const [query, setQuery] = useState("");
   const [centers, setCenters] = useState<Center[]>(INITIAL_CENTERS);
   const [csvError, setCsvError] = useState<string | null>(null);
+  // 파일 상단 컴포넌트 내부에 추가
+const [sidebarOpen, setSidebarOpen] = useState(true);
+
+// 사이드바 토글 시 지도 리사이즈
+useEffect(() => {
+  // 사이드바 애니메이션이 끝난 뒤 리사이즈(미세 딜레이)
+  const t = setTimeout(() => mapObj.current?.resize(), 220);
+  return () => clearTimeout(t);
+}, [sidebarOpen]);
+
 
   // 관리자 모드 게이트: ?admin=SECRET 이 VITE_ADMIN_SECRET와 일치할 때만 업로드 UI 노출
   const admin = useMemo(() => {
@@ -283,8 +293,28 @@ export default function SeoulExamCentersMap() {
 
   // UI
   return (
-    <div style={{height: "100vh", width: "100vw", display: "grid", gridTemplateColumns: "minmax(260px,400px) 1fr"}}>
-      <aside style={{borderRight: "1px solid #e5e7eb", padding: 12, overflow: "auto"}}>
+    <div
+  id="layout"
+  style={{
+    position: "relative",
+    height: "100vh",
+    width: "100vw",
+    display: "grid",
+    gridTemplateColumns: sidebarOpen ? "minmax(260px,400px) 1fr" : "0px 1fr",
+    transition: "grid-template-columns .2s ease"
+  }}
+>
+
+      <aside
+  style={{
+    borderRight: "1px solid #e5e7eb",
+    padding: sidebarOpen ? 12 : 0,
+    overflow: "auto",
+    overflowY: "auto",
+    transition: "padding .2s ease",
+  }}
+  aria-hidden={!sidebarOpen}
+>
         <h1 style={{fontSize: 18, fontWeight: 600}}>서울강남지사 시험장 안내</h1>
         <p style={{fontSize: 13, color: "#666"}}>표시 영역 제한: 강남·서초·송파·강동만.</p>
         {admin && (<div style={{display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, padding: "3px 8px", borderRadius: 9999, background: "#fef3c7", color: "#92400e"}}>관리자 모드</div>)}
@@ -331,6 +361,7 @@ export default function SeoulExamCentersMap() {
                style={{width: "100%", border: "1px solid #d1d5db", borderRadius: 16, padding: "6px 10px", fontSize: 13, marginTop: 12}} />
         <div style={{fontSize: 12, color: "#6b7280"}}>총 {filtered.length}개 표시{centers.length===0?" (데이터 없음)":""}</div>
 
+        
         {/* 목록 */}
         <ul style={{marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflow: "auto", maxHeight: "calc(100vh - 340px)", paddingRight: 4}}>
           {filtered.map((c) => (
@@ -351,6 +382,31 @@ export default function SeoulExamCentersMap() {
 
         <div style={{paddingTop: 8, fontSize: 11, color: "#6b7280"}}>지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.</div>
       </aside>
+      
+      {/* layout 안, aside와 map div 사이 어딘가에 추가 */}
+<button
+  onClick={() => setSidebarOpen(v => !v)}
+  aria-pressed={sidebarOpen}
+  aria-label={sidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
+  style={{
+    position: "absolute",
+    top: 10,
+    left: sidebarOpen ? 340 : 10, // 열렸을 때는 사이드바 경계 근처
+    zIndex: 5,
+    border: 0,
+    borderRadius: 9999,
+    padding: "8px 10px",
+    background: "#111",
+    color: "#fff",
+    fontSize: 14,
+    lineHeight: 1,
+    boxShadow: "0 6px 18px rgba(0,0,0,.2)",
+    cursor: "pointer",
+    transition: "left .2s ease"
+  }}
+>
+  {sidebarOpen ? "◀︎" : "▶︎"}
+</button>
 
       <div ref={mapRef} style={{height: "100%", width: "100%"}} />
     </div>
