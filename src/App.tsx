@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { Map as MlMap, LngLatBoundsLike } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { Collapsible } from "./components/Collapsible";
+
 
 // =========================
 // 데이터 스키마 정의
@@ -390,25 +392,89 @@ export default function SeoulExamCentersMap() {
                style={{width: "100%", border: "1px solid #d1d5db", borderRadius: 16, padding: "6px 10px", fontSize: 13, marginTop: 12}} />
         <div style={{fontSize: 12, color: "#6b7280"}}>총 {filtered.length}개 표시{centers.length===0?" (데이터 없음)":""}</div>
 
-        {/* 목록 */}
-        <ul style={{marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflow: "auto", maxHeight: "calc(100vh - 340px)", paddingRight: 4}}>
-          {filtered.map((c) => (
-            <li key={c.id} style={{border: "1px solid #e5e7eb", borderRadius: 12, padding: 12}}>
-              <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-                <div style={{fontWeight: 600, fontSize: 14}}>{c.name}</div>
-                <button onClick={() => flyToCenter(c.lng, c.lat)} style={{fontSize: 12, textDecoration: "underline", opacity: 0.8}}>지도이동</button>
-              </div>
-              <div style={{fontSize: 12, color: "#4b5563", marginTop: 4}}>{c.address}</div>
-              <div style={{fontSize: 11, color: "#6b7280", marginTop: 4}}>{c.note}</div>
-              <div style={{marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4}}>{(c.tags || []).map((tag) => (
-                <span key={tag} style={{fontSize: 10, background: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: 9999}}>{tag}</span>
-              ))}</div>
-            </li>
+        <Collapsible
+  title={
+    <>
+      목록{" "}
+      <span style={{ opacity: 0.6, fontSize: 12 }}>({filtered.length})</span>
+    </>
+  }
+  defaultOpen={true}
+>
+  {/* 목록 */}
+  <ul
+    style={{
+      marginTop: 8,
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      overflow: "auto",
+      maxHeight: "calc(100vh - 340px)",
+      paddingRight: 4,
+    }}
+  >
+    {filtered.map((c) => (
+      <li
+        key={c.id}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          padding: 12,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</div>
+          <button
+            onClick={() => flyToCenter(c.lng, c.lat)}
+            style={{
+              fontSize: 12,
+              textDecoration: "underline",
+              opacity: 0.8,
+            }}
+          >
+            지도이동
+          </button>
+        </div>
+        <div style={{ fontSize: 12, color: "#4b5563", marginTop: 4 }}>
+          {c.address}
+        </div>
+        <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+          {c.note}
+        </div>
+        <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4 }}>
+          {(c.tags || []).map((tag) => (
+            <span
+              key={tag}
+              style={{
+                fontSize: 10,
+                background: "#eff6ff",
+                color: "#1d4ed8",
+                padding: "2px 8px",
+                borderRadius: 9999,
+              }}
+            >
+              {tag}
+            </span>
           ))}
-          {filtered.length === 0 && (<li style={{fontSize: 12, color: "#6b7280"}}>표시할 데이터가 없습니다.</li>)}
-        </ul>
+        </div>
+      </li>
+    ))}
+    {filtered.length === 0 && (
+      <li style={{ fontSize: 12, color: "#6b7280" }}>표시할 데이터가 없습니다.</li>
+    )}
+  </ul>
 
-        <div style={{paddingTop: 8, fontSize: 11, color: "#6b7280"}}>지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.</div>
+  <div style={{ paddingTop: 8, fontSize: 11, color: "#6b7280" }}>
+    지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.
+  </div>
+</Collapsible>
+
       </aside>
 
       <div ref={mapRef} style={{height: "100%", width: "100%"}} />
