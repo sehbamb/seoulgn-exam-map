@@ -18,7 +18,11 @@ export type Center = {
 };
 
 // 초기값: CSV/centers.json 로드 전 기본 값
-const INITIAL_CENTERS: Center[] = [];
+const INITIAL_CENTERS: Center[] = [
+  { id: "gn-2025-101", name: "(송파)이젠아카데미컴퓨터학원", address: "서울시 송파구 중대로 109 대동빌딩", lat: 37.49371, lng: 127.1204, note: "3/8호선 가락시장역 4번출구 도보 150m", tags: ["국가기술", "필기", "주차불가"] },
+  { id: "gn-2025-102", name: "TIEC 강남", address: "서울시 서초구 서초중앙로 151 정암빌딩 지하2층", lat: 37.4952, lng: 127.013, note: "2/3호선 교대역 11번 출구 200m", tags: ["국가기술", "필기", "주차불가"] },
+  { id: "gn-2025-201", name: "서울특별시 기술교육원 동부캠퍼스", address: "서울시 강동구 고덕로 183", lat: 37.55492, lng: 127.1459, note: "5호선 명일역 3번 출구에서 680m", tags: ["국가기술", "실기(작업)", "주차불가"] }
+];
 
 // =========================
 // 유틸: 테스트/가드
@@ -159,39 +163,17 @@ export default function SeoulExamCentersMap() {
     catch (e: any) { setCsvError(e?.message || String(e)); }
   };
 
-  // 비관리자: 공개 JSON 자동 로드(있을 때만) + 실패 시 CSV 런타임 파싱 폴백
+  // 비관리자: 공개 JSON 자동 로드(있을 때만)
   useEffect(() => {
     if (admin) return;
     (async () => {
       try {
-        const basePath = ((import.meta as any)?.env?.BASE_URL || (window as any).BASE_URL || "/") as string;
-      const absBase = new URL(basePath, window.location.origin).toString();
-        // 1차: centers.json 시도
-        const jsonUrl = new URL("centers.json", absBase).toString();
-        const res = await fetch(jsonUrl, { cache: "no-store" });
+        const res = await fetch(new URL("centers.json", (import.meta as any)?.env?.BASE_URL || (window as any).BASE_URL || "/").toString(), { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            validateCenters(data as Center[], undefined);
-            setCenters(data as Center[]);
-            return;
-          }
+          if (Array.isArray(data)) { validateCenters(data as Center[], undefined); setCenters(data as Center[]); }
         }
-        // 2차: data/centers.csv 런타임 파싱
-        const csvUrl = new URL("data/centers.csv", absBase).toString();
-        const csvRes = await fetch(csvUrl, { cache: "no-store" });
-        if (csvRes.ok) {
-          const text = await csvRes.text();
-          const parsed = parseCSV(text);
-          if (parsed.length > 0) {
-            validateCenters(parsed, undefined);
-            setCenters(parsed);
-            console.warn("[fallback] loaded data from data/centers.csv at runtime");
-          }
-        } else {
-          console.warn("centers.json and data/centers.csv not found. showing empty map.");
-        }
-      } catch (e) { console.error(e); }
+      } catch { /* 공개 데이터 없으면 무시 */ }
     })();
   }, [admin]);
 
@@ -283,76 +265,66 @@ export default function SeoulExamCentersMap() {
 
   // UI
   return (
-    <div style={{height: "100vh", width: "100vw", display: "grid", gridTemplateColumns: "minmax(260px,400px) 1fr"}}>
-      <aside style={{borderRight: "1px solid #e5e7eb", padding: 12, overflow: "auto"}}>
-        <h1 style={{fontSize: 18, fontWeight: 600}}>서울 시험장 안내</h1>
-        <p style={{fontSize: 13, color: "#666"}}>표시 영역 제한: 강남·서초·송파·강동만.</p>
-        {admin && (<div style={{display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, padding: "3px 8px", borderRadius: 9999, background: "#fef3c7", color: "#92400e"}}>관리자 모드</div>)}
+    <div className="w-full h-screen grid grid-cols-1 lg:grid-cols-[400px_1fr]">
+      <aside className="border-r border-gray-200 p-4 space-y-3">
+        <h1 className="text-xl font-semibold">서울강남지사 시험장 안내</h1>
+        <p className="text-sm text-gray-600">표시 영역 제한: 강남·서초·송파·강동만.</p>
+        {admin && (<div className="inline-flex items-center gap-2 text-[11px] px-2 py-[3px] rounded-full bg-amber-100 text-amber-800">관리자 모드</div>)}
 
         {/* 태그 필터 */}
-        <div style={{marginTop: 12, padding: 12, border: "1px solid #e5e7eb", borderRadius: 12}}>
-          <div style={{fontSize: 14, fontWeight: 600}}>태그 필터</div>
-          {allTags.length === 0 ? (
-            <div style={{fontSize: 12, color: "#6b7280"}}>사용 가능한 태그가 없습니다.</div>
-          ) : (
-            <div style={{display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6}}>
+        <div className="space-y-2 p-3 border rounded-xl">
+          <div className="text-sm font-medium">태그 필터</div>
+          {allTags.length === 0 ? (<div className="text-xs text-gray-500">사용 가능한 태그가 없습니다.</div>) : (
+            <div className="flex flex-wrap gap-2">
               {allTags.map((t) => (
-                <button key={t} onClick={() => toggleTag(t)}
-                  style={{fontSize: 12, padding: "4px 8px", borderRadius: 9999, border: "1px solid #d1d5db", background: activeTags.includes(t) ? "#2563eb" : "#fff", color: activeTags.includes(t) ? "#fff" : "#374151"}}>
-                  {t}
-                </button>
+                <button key={t} onClick={() => toggleTag(t)} className={`text-xs px-2 py-[3px] rounded-full border ${activeTags.includes(t) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-700"}`} title={t}>{t}</button>
               ))}
-              {activeTags.length > 0 && (
-                <button onClick={clearTags} style={{fontSize: 12, textDecoration: "underline"}}>초기화</button>
-              )}
+              {activeTags.length > 0 && (<button onClick={clearTags} className="text-xs underline">초기화</button>)}
             </div>
           )}
-          <div style={{fontSize: 11, color: "#6b7280", marginTop: 6}}>필기: 파란색, 실기(작업): 빨간색, 기타: 초록색</div>
+          <div className="text-[11px] text-gray-500">필기: 파란색, 실기(작업): 빨간색, 기타: 초록색</div>
         </div>
 
         {/* CSV 업로드 (관리자 전용) */}
         {admin && (
-          <div style={{marginTop: 12, padding: 12, border: "1px solid #e5e7eb", borderRadius: 12, background: "#f9fafb"}}>
-            <div style={{fontSize: 14, fontWeight: 600}}>CSV 업로드</div>
+          <div className="space-y-2 p-3 border rounded-xl bg-gray-50">
+            <div className="text-sm font-medium">CSV 업로드</div>
             <input type="file" accept=".csv,text/csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadCSV(f); }} />
-            <div style={{fontSize: 12, color: "#6b7280"}}>필수 헤더: id,name,lat,lng | 선택: address,phone,hours,note,tags</div>
-            {csvError && <div style={{fontSize: 12, color: "#dc2626"}}>{csvError}</div>}
+            <div className="text-xs text-gray-500">필수 헤더: id,name,lat,lng | 선택: address,phone,hours,note,tags</div>
+            {csvError && <div className="text-xs text-red-600">{csvError}</div>}
             <details>
-              <summary style={{fontSize: 12, textDecoration: "underline", cursor: "pointer"}}>CSV 텍스트로 붙여넣기</summary>
-              <div style={{marginTop: 8}}>
-                <textarea onChange={(e) => onPasteCSV(e.target.value)} placeholder="id,name,address,lat,lng,phone,hours,note,tags ..." style={{width: "100%", height: 120, border: "1px solid #d1d5db", borderRadius: 8, padding: 8, fontSize: 13}} />
+              <summary className="text-xs underline cursor-pointer">CSV 텍스트로 붙여넣기</summary>
+              <div className="space-y-2 mt-2">
+                <textarea onChange={(e) => onPasteCSV(e.target.value)} placeholder="id,name,address,lat,lng,phone,hours,note,tags ..." className="w-full h-28 border rounded p-2 text-sm" />
               </div>
             </details>
           </div>
         )}
 
         {/* 검색 */}
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="이름, 주소, 메모, 태그 검색"
-               style={{width: "100%", border: "1px solid #d1d5db", borderRadius: 16, padding: "6px 10px", fontSize: 13, marginTop: 12}} />
-        <div style={{fontSize: 12, color: "#6b7280"}}>총 {filtered.length}개 표시{centers.length===0?" (데이터 없음)":""}</div>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="이름, 주소, 메모, 태그 검색" className="w-full rounded-2xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <div className="text-xs text-gray-500">총 {filtered.length}개 표시</div>
 
         {/* 목록 */}
-        <ul style={{marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflow: "auto", maxHeight: "calc(100vh - 340px)", paddingRight: 4}}>
+        <ul className="space-y-2 overflow-auto max-h-[calc(100vh-340px)] pr-1">
           {filtered.map((c) => (
-            <li key={c.id} style={{border: "1px solid #e5e7eb", borderRadius: 12, padding: 12}}>
-              <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-                <div style={{fontWeight: 600, fontSize: 14}}>{c.name}</div>
-                <button onClick={() => flyToCenter(c.lng, c.lat)} style={{fontSize: 12, textDecoration: "underline", opacity: 0.8}}>지도이동</button>
+            <li key={c.id} className="group border rounded-xl p-3 hover:shadow-sm transition">
+              <div className="flex items-center justify-between">
+                <div className="font-medium text-sm">{c.name}</div>
+                <button onClick={() => flyToCenter(c.lng, c.lat)} className="text-xs underline opacity-70 group-hover:opacity-100">지도이동</button>
               </div>
-              <div style={{fontSize: 12, color: "#4b5563", marginTop: 4}}>{c.address}</div>
-              <div style={{fontSize: 11, color: "#6b7280", marginTop: 4}}>{c.note}</div>
-              <div style={{marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4}}>{(c.tags || []).map((tag) => (
-                <span key={tag} style={{fontSize: 10, background: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: 9999}}>{tag}</span>
-              ))}</div>
+              <div className="text-xs text-gray-600 mt-1">{c.address}</div>
+              <div className="text-[11px] text-gray-500 mt-1">{c.note}</div>
+              <div className="mt-1 flex flex-wrap gap-1">{(c.tags || []).map((tag) => (<span key={tag} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-[2px] rounded-full">{tag}</span>))}</div>
             </li>
           ))}
-          {filtered.length === 0 && (<li style={{fontSize: 12, color: "#6b7280"}}>표시할 데이터가 없습니다.</li>)}
+          {filtered.length === 0 && (<li className="text-xs text-gray-500">표시할 데이터가 없습니다.</li>)}
         </ul>
 
-        <div style={{paddingTop: 8, fontSize: 11, color: "#6b7280"}}>지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.</div>
+        <div className="pt-2 text:[11px] text-gray-500">지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.</div>
       </aside>
 
-      <div ref={mapRef} style={{height: "100%", width: "100%"}} />
+      <div ref={mapRef} className="w-full h-full" />
     </div>
   );
 }
