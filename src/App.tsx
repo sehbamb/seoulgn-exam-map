@@ -267,7 +267,7 @@ export default function SeoulExamCentersMap() {
   return (
     <div className="w-full h-screen grid grid-cols-1 lg:grid-cols-[400px_1fr]">
       <aside className="border-r border-gray-200 p-4 space-y-3">
-        <h1 className="text-xl font-semibold">서울강남지사 시험장 안내</h1>
+        <h1 className="text-xl font-semibold">서울 시험장 안내</h1>
         <p className="text-sm text-gray-600">표시 영역 제한: 강남·서초·송파·강동만.</p>
         {admin && (<div className="inline-flex items-center gap-2 text-[11px] px-2 py-[3px] rounded-full bg-amber-100 text-amber-800">관리자 모드</div>)}
 
