@@ -245,7 +245,7 @@ useEffect(() => {
         "circle-stroke-color": "#ffffff", "circle-stroke-width": 2 } });
 
       // 라벨
-      map.addLayer({ id: "labels", type: "symbol", source: "centers", filter: ["!has", "point_count"], layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 13, "text-offset": [0, 1.2], "text-anchor": "top" }, paint: { "text-halo-color": "#ffffff", "text-halo-width": 1 } });
+      map.addLayer({ id: "labels", type: "symbol", source: "centers", filter: ["!has", "point_count"], layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 14, "text-offset": [0, 1.2], "text-anchor": "top" }, paint: { "text-halo-color": "#ffffff", "text-halo-width": 1 } });
 
       // 상호작용
       map.on("click", "clusters", (e) => {
@@ -315,7 +315,7 @@ useEffect(() => {
   }}
   aria-hidden={!sidebarOpen}
 >
-        <h1 style={{fontSize: 18, fontWeight: 600}}>서울강남지사 시험장 안내</h1>
+        <h1 style={{fontSize: 18, fontWeight: 600}}>HRDK 서울강남지사 시험장 안내</h1>
         <p style={{fontSize: 13, color: "#666"}}>표시 영역 제한: 강남·서초·송파·강동만.</p>
         {admin && (<div style={{display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, padding: "3px 8px", borderRadius: 9999, background: "#fef3c7", color: "#92400e"}}>관리자 모드</div>)}
 
@@ -380,7 +380,9 @@ useEffect(() => {
           {filtered.length === 0 && (<li style={{fontSize: 12, color: "#6b7280"}}>표시할 데이터가 없습니다.</li>)}
         </ul>
 
-        <div style={{paddingTop: 8, fontSize: 11, color: "#6b7280"}}>지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.</div>
+        <div style={{paddingTop: 8, fontSize: 11, color: "#6b7280"}}>지도 타일: OpenStreetMap. 텍스트 라벨: MapLibre demo glyphs. 운영 전환 시 자체 타일/글리프 서버 권장.
+        
+        한국산업인력공단 서울강남지사 자격시험부 작성 2025-10-24</div>
       </aside>
       
       {/* layout 안, aside와 map div 사이 어딘가에 추가 */}
