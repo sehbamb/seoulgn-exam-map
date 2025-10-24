@@ -131,6 +131,15 @@ function buildOutsideMask(bounds: [[number, number], [number, number]]) {
 export default function SeoulExamCentersMap() {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapObj = useRef<MlMap | null>(null);
+  // 사이드바 열림 상태
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+// 사이드바 열고 닫을 때 지도 리사이즈(그리드 전환 0.2s 후)
+useEffect(() => {
+  const t = setTimeout(() => mapObj.current?.resize?.(), 220);
+  return () => clearTimeout(t);
+}, [sidebarOpen]);
+
 
   const [query, setQuery] = useState("");
   const [centers, setCenters] = useState<Center[]>(INITIAL_CENTERS);
@@ -337,8 +346,46 @@ export default function SeoulExamCentersMap() {
   };
 
   // UI
+  
   return (
-    <div style={{height: "100vh", width: "100vw", display: "grid", gridTemplateColumns: "minmax(260px,400px) 1fr"}}>
+    <style>{`
+  /* 사이드바 토글 공용 스타일 */
+  .side-toggle {
+    position: absolute;
+    top: 10px;
+    left: 340px;
+    z-index: 5;
+    border: 0;
+    border-radius: 9999px;
+    padding: 8px 10px;
+    background: #111; color: #fff;
+    font-size: 14px; line-height: 1;
+    box-shadow: 0 6px 18px rgba(0,0,0,.2);
+    cursor: pointer;
+    transition: left .2s ease;
+  }
+  /* 체크박스는 숨김 */
+  #sb-toggle { position: absolute; opacity: 0; pointer-events: none; }
+
+  /* 레이아웃 컨테이너에 id를 붙여줄 거라서 그걸로 제어 */
+  #layout { position: relative; }
+  /* 체크되면: 사이드바는 화면 밖으로, 그리드는 0px + 1fr 로 확장 */
+  #layout:has(#sb-toggle:checked) .sidebar {
+    width: 0 !important;
+    padding: 0 !important;
+    border-right-color: transparent !important;
+  }
+  #layout:has(#sb-toggle:checked) .side-toggle { left: 8px; }
+  #layout:has(#sb-toggle:checked) .grid {
+    grid-template-columns: 0px 1fr !important;
+  }
+`}</style>
+    
+  <div id="layout">
+  <input id="sb-toggle" type="checkbox" defaultChecked={false} />
+    <div 
+    className="grid"
+    style={{height: "100vh", width: "100vw", display: "grid", gridTemplateColumns: "minmax(260px,400px) 1fr"}}>
       <aside style={{borderRight: "1px solid #e5e7eb", padding: 12, overflow: "auto"}}>
         <h1 style={{fontSize: 18, fontWeight: 600}}>서울강남지사 시험장 안내</h1>
         <p style={{fontSize: 13, color: "#666"}}>표시 영역 제한: 강남·서초·송파·강동만.</p>
@@ -476,8 +523,13 @@ export default function SeoulExamCentersMap() {
 </Collapsible>
 
       </aside>
+    <label htmlFor="sb-toggle" className="side-toggle" title="사이드바 열기/닫기" aria-label="사이드바 열기/닫기">
+  ◀▶
+</label>
 
       <div ref={mapRef} style={{height: "100%", width: "100%"}} />
     </div>
+</div> {/* #layout 닫기 */}
+
   );
 }
