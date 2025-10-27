@@ -361,7 +361,6 @@ useEffect(() => {
       초기화
     </button>
   )}
-</div>
 
             </div>
           )}
