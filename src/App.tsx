@@ -128,18 +128,29 @@ useEffect(() => {
     centers.forEach((c) => (c.tags || []).forEach((t) => s.add(t.trim())));
     return Array.from(s).sort();
   }, [centers]);
-  const [activeTags, setActiveTags] = useState<string[]>([]);
-  const toggleTag = (t: string) => setActiveTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
-  const clearTags = () => setActiveTags([]);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const selectTag = (t: string) => setActiveTag((prev) => (prev === t ? null : t));
+  const clearTag = () => setActiveTag(null);
+
 
   // 검색 + 태그 필터
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    let arr = centers;
-    if (q) arr = arr.filter((c) => [c.name, c.address, c.note, ...(c.tags || [])].join(" ").toLowerCase().includes(q));
-    if (activeTags.length > 0) arr = arr.filter((c) => (c.tags || []).some((t) => activeTags.includes(t)));
-    return arr;
-  }, [centers, query, activeTags]);
+  const q = query.trim().toLowerCase();
+  let arr = centers;
+  if (q) {
+    arr = arr.filter((c) =>
+      [c.name, c.address, c.note, ...(c.tags || [])]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    );
+  }
+  if (activeTag) {
+    arr = arr.filter((c) => (c.tags || []).some((t) => t === activeTag));
+  }
+  return arr;
+}, [centers, query, activeTag]);
+
 
   // GeoJSON: examType 파생. 실기(작업) 빨강, 필기 파랑, 나머지 초록
   const geojson = useMemo(() => ({
@@ -326,15 +337,32 @@ useEffect(() => {
             <div style={{fontSize: 12, color: "#6b7280"}}>사용 가능한 태그가 없습니다.</div>
           ) : (
             <div style={{display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6}}>
-              {allTags.map((t) => (
-                <button key={t} onClick={() => toggleTag(t)}
-                  style={{fontSize: 12, padding: "4px 8px", borderRadius: 9999, border: "1px solid #d1d5db", background: activeTags.includes(t) ? "#2563eb" : "#fff", color: activeTags.includes(t) ? "#fff" : "#374151"}}>
-                  {t}
-                </button>
-              ))}
-              {activeTags.length > 0 && (
-                <button onClick={clearTags} style={{fontSize: 12, textDecoration: "underline"}}>초기화</button>
-              )}
+  {allTags.map((t) => {
+    const active = activeTag === t;
+    return (
+      <button
+        key={t}
+        onClick={() => selectTag(t)}
+        style={{
+          fontSize: 12,
+          padding: "4px 8px",
+          borderRadius: 9999,
+          border: "1px solid " + (active ? "#111" : "#d1d5db"),
+          background: active ? "#111" : "#fff",
+          color: active ? "#fff" : "#374151"
+        }}
+      >
+        {t}
+      </button>
+    );
+  })}
+  {activeTag && (
+    <button onClick={clearTag} style={{fontSize: 12, textDecoration: "underline"}}>
+      초기화
+    </button>
+  )}
+</div>
+
             </div>
           )}
           <div style={{fontSize: 11, color: "#6b7280", marginTop: 6}}>필기: 파란색, 실기(작업): 빨간색, 기타: 초록색</div>
