@@ -326,7 +326,7 @@ useEffect(() => {
   }}
   aria-hidden={!sidebarOpen}
 >
-        <h1 style={{fontSize: 18, fontWeight: 600}}>HRDK 서울강남지사 시험장 안내</h1>
+        <h1 style={{fontSize: 18, fontWeight: 600}}>HRDK 서울강남지사 시험장 안내 [PC화면 권장] /h1>
         <p style={{fontSize: 13, color: "#666"}}>표시 영역 제한: 강남·서초·송파·강동만.</p>
         {admin && (<div style={{display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, padding: "3px 8px", borderRadius: 9999, background: "#fef3c7", color: "#92400e"}}>관리자 모드</div>)}
 
